@@ -44,43 +44,73 @@ const Index = () => {
     setUrls(newUrls);
   };
 
-  const simulateProductExtraction = (url: string): Product => {
+  const scrapeProductData = async (url: string): Promise<Product> => {
     const productId = Math.random().toString(36).substr(2, 9);
-    const sampleProducts = [
-      {
-        title: "Wireless Bluetooth Headphones with Noise Cancellation",
-        price: "$29.99",
-        originalPrice: "$59.99",
-        description: "High-quality wireless headphones with active noise cancellation, 30-hour battery life, and premium sound quality."
-      },
-      {
-        title: "Smart Watch Fitness Tracker with Heart Rate Monitor",
-        price: "$45.99",
-        originalPrice: "$89.99",
-        description: "Advanced fitness tracker with GPS, heart rate monitoring, sleep tracking, and 7-day battery life."
-      },
-      {
-        title: "Portable Phone Charger Power Bank 20000mAh",
-        price: "$19.99",
-        originalPrice: "$39.99",
-        description: "High-capacity power bank with fast charging, dual USB ports, and LED display showing remaining power."
-      }
-    ];
-
-    const randomProduct = sampleProducts[Math.floor(Math.random() * sampleProducts.length)];
     
-    return {
-      id: productId,
-      title: randomProduct.title,
-      price: randomProduct.price,
-      originalPrice: randomProduct.originalPrice,
-      imageUrl: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=300&h=300&fit=crop",
-      description: randomProduct.description,
-      url: url,
-      rating: (4 + Math.random()).toFixed(1),
-      reviews: Math.floor(Math.random() * 1000 + 100).toString(),
-      variants: ['Black', 'White', 'Blue']
-    };
+    try {
+      // Try to extract product info from AliExpress URL using a scraping service
+      // For now, we'll use a demo scraping API - replace with your actual backend
+      const response = await fetch('https://api.scrapingbee.com/api/v1/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          api_key: 'YOUR_SCRAPING_BEE_API_KEY', // Replace with actual API key
+          url: url,
+          extract_rules: {
+            title: '.product-title-text',
+            price: '.product-price-current',
+            originalPrice: '.product-price-original',
+            description: '.product-description',
+            imageUrl: '.product-image img@src',
+            rating: '.overview-rating-average',
+            reviews: '.review-count'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Scraping failed');
+      }
+
+      const data = await response.json();
+      
+      return {
+        id: productId,
+        title: data.title || 'Product Title Not Found',
+        price: data.price || '$0.00',
+        originalPrice: data.originalPrice || undefined,
+        imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=300&h=300&fit=crop",
+        description: data.description || 'Product description not available',
+        url: url,
+        rating: data.rating || '0.0',
+        reviews: data.reviews || '0',
+        variants: ['Default']
+      };
+    } catch (error) {
+      console.error('Error scraping product:', error);
+      
+      // Fallback to basic URL analysis if scraping fails
+      toast({
+        title: "Scraping unavailable",
+        description: "Real scraping requires a backend service. Using URL analysis instead.",
+        variant: "destructive",
+      });
+      
+      return {
+        id: productId,
+        title: `Product from ${new URL(url).hostname}`,
+        price: '$0.00',
+        originalPrice: undefined,
+        imageUrl: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=300&h=300&fit=crop",
+        description: `Product URL: ${url}`,
+        url: url,
+        rating: '0.0',
+        reviews: '0',
+        variants: ['Default']
+      };
+    }
   };
 
   const scrapeProducts = async () => {
@@ -109,7 +139,7 @@ const Index = () => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        const product = simulateProductExtraction(url);
+        const product = await scrapeProductData(url);
         setProducts(prev => [...prev, product]);
         setProgress(((i + 1) / validUrls.length) * 100);
       }
