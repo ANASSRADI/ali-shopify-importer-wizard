@@ -33,8 +33,9 @@ serve(async (req) => {
     console.log('Scraping product from URL:', url);
 
     // Call ScrapingBee API
-    const apiUrl = `https://api.scrapingbee.com/api/v1/?api_key=${scrapingBeeApiKey}&url=${encodeURIComponent(url)}&render_js=true&premium_proxy=true`;
-    
+    //const apiUrl = `https://api.scrapingbee.com/api/v1/?api_key=${scrapingBeeApiKey}&url=${encodeURIComponent(url)}&render_js=true&premium_proxy=true`;
+    const apiUrl = `https://app.scrapingbee.com/api/v1?api_key=${scrapingBeeApiKey}&url=${encodeURIComponent(url)}&render_js=true&premium_proxy=true`;
+
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
