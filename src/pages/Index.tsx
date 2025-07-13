@@ -45,52 +45,37 @@ const Index = () => {
   };
 
   const scrapeProductData = async (url: string): Promise<Product> => {
-    const productId = Math.random().toString(36).substr(2, 9);
-    
     try {
-      // ScrapingBee API call with correct format
-      const apiKey = 'YOUR_SCRAPING_BEE_API_KEY'; // Replace with your actual API key
-      const apiUrl = `https://api.scrapingbee.com/api/v1/?api_key=${apiKey}&url=${encodeURIComponent(url)}&render_js=false`;
+      console.log('Calling edge function to scrape:', url);
       
-      const response = await fetch(apiUrl, {
-        method: 'GET',
+      const response = await fetch('https://hdaahplneuvxlshkoltj.supabase.co/functions/v1/scrape-product', {
+        method: 'POST',
         headers: {
-          'Accept': 'text/html',
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url })
       });
 
       if (!response.ok) {
-        throw new Error(`Scraping failed: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Scraping failed: ${response.status}`);
       }
 
-      const htmlContent = await response.text();
+      const productData = await response.json();
+      console.log('Successfully scraped product:', productData.title);
       
-      // Basic HTML parsing - you'd want to use a proper parser in production
-      const titleMatch = htmlContent.match(/<title[^>]*>([^<]+)</i);
-      const title = titleMatch ? titleMatch[1].replace(' - AliExpress', '').trim() : 'Product Title Not Found';
-      
-      return {
-        id: productId,
-        title: title,
-        price: '$0.00', // HTML parsing would be needed to extract actual price
-        originalPrice: undefined,
-        imageUrl: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=300&h=300&fit=crop",
-        description: `Scraped from: ${url}`,
-        url: url,
-        rating: '0.0',
-        reviews: '0',
-        variants: ['Default']
-      };
+      return productData;
     } catch (error) {
       console.error('Error scraping product:', error);
       
-      // Fallback to basic URL analysis if scraping fails
       toast({
-        title: "Scraping unavailable",
-        description: "Real scraping requires a backend service. Using URL analysis instead.",
+        title: "Scraping failed",
+        description: error instanceof Error ? error.message : "Failed to scrape product data",
         variant: "destructive",
       });
       
+      // Return fallback data
+      const productId = Math.random().toString(36).substr(2, 9);
       return {
         id: productId,
         title: `Product from ${new URL(url).hostname}`,
